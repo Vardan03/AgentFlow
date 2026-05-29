@@ -1,0 +1,76 @@
+# Dependencies
+node_modules/
+.pnp
+.pnp.js
+
+# Build outputs
+dist/
+build/
+out/
+
+# Turbo
+.turbo/
+
+# NestJS
+apps/api/dist/
+
+# Vite
+apps/web/dist/
+
+# Environment variables
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+.env.production
+
+# Prisma
+packages/db/.env
+prisma/migrations/dev/
+
+# Logs
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+# OS
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Editor
+.vscode/
+.idea/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+*.swp
+
+# TypeScript
+*.tsbuildinfo
+
+# Testing & Coverage
+coverage/
+.nyc_output/
+test-results/
+playwright-report/
+playwright/.cache/
+
+# Cache
+.cache/
+.eslintcache
+.parcel-cache/
+.sass-cache/
+
+# pnpm
+.pnpm-store/
+
+# Claude
+CLAUDE.md

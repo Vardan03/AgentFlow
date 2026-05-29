@@ -1,0 +1,79 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id                  String    @id @default(cuid())
+  email               String    @unique
+  password            String
+  name                String?
+  anthropicApiKey     String?
+  passwordResetToken  String?
+  passwordResetExpiry DateTime?
+  createdAt           DateTime  @default(now())
+  updatedAt           DateTime  @updatedAt
+
+  agents    Agent[]
+  workflows Workflow[]
+}
+
+model Agent {
+  id           String   @id @default(cuid())
+  name         String
+  description  String?
+  systemPrompt String?
+  model        String   @default("claude-sonnet-4-6")
+  temperature  Float    @default(0.7)
+  maxTokens    Int      @default(1024)
+  enabledTools Json     @default("[]")
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model McpServer {
+  id           String   @id @default(cuid())
+  name         String
+  description  String?
+  endpoint     String
+  authType     String   @default("none")
+  authConfig   Json?
+  isPredefined Boolean  @default(false)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+}
+
+model Workflow {
+  id          String   @id @default(cuid())
+  name        String
+  description String?
+  graph       Json
+  isEnabled   Boolean  @default(false)
+  version     Int      @default(1)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  userId     String
+  user       User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  executions Execution[]
+}
+
+model Execution {
+  id         String    @id @default(cuid())
+  status     String    @default("pending")
+  trigger    String    @default("manual")
+  logs       Json?
+  startedAt  DateTime?
+  finishedAt DateTime?
+  createdAt  DateTime  @default(now())
+
+  workflowId String
+  workflow   Workflow @relation(fields: [workflowId], references: [id], onDelete: Cascade)
+}
