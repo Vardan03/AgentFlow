@@ -4,11 +4,13 @@ import { AppLayout } from '@/components/layout/app-layout'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { useAgents } from '@/hooks/use-agents'
+import { useWorkflows } from '@/hooks/use-workflows'
 import { useAuthStore } from '@/store/auth.store'
 
 export default function DashboardPage() {
   const user = useAuthStore((s) => s.user)
   const { data: agents } = useAgents()
+  const { data: workflows } = useWorkflows()
 
   return (
     <AppLayout>
@@ -32,7 +34,7 @@ export default function DashboardPage() {
               <CardTitle className="text-sm font-medium text-muted-foreground">Workflows</CardTitle>
             </CardHeader>
             <CardContent>
-              <p className="text-3xl font-bold">0</p>
+              <p className="text-3xl font-bold">{workflows?.length ?? 0}</p>
             </CardContent>
           </Card>
           <Card>

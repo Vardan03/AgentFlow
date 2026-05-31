@@ -62,6 +62,7 @@ export default function TestAgentPage() {
           <div className="flex-1">
             <div className="flex items-center gap-2">
               <span className="font-semibold">{agent.name}</span>
+              <Badge variant="outline" className="text-xs capitalize">{agent.provider}</Badge>
               <Badge variant="secondary" className="text-xs font-mono">
                 {agent.model.split('-').slice(1, 3).join('-')}
               </Badge>

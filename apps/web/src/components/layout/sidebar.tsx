@@ -1,4 +1,4 @@
-import { Bot, LayoutDashboard, Settings, LogOut } from 'lucide-react'
+import { Bot, GitFork, LayoutDashboard, Settings, LogOut } from 'lucide-react'
 import { NavLink, useNavigate } from 'react-router-dom'
 import { cn } from '@/lib/utils'
 import { useAuthStore } from '@/store/auth.store'
@@ -7,6 +7,7 @@ import { useQueryClient } from '@tanstack/react-query'
 const links = [
   { to: '/dashboard', icon: LayoutDashboard, label: 'Dashboard' },
   { to: '/agents', icon: Bot, label: 'Agents' },
+  { to: '/workflows', icon: GitFork, label: 'Workflows' },
   { to: '/settings', icon: Settings, label: 'Settings' },
 ]
 

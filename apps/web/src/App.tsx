@@ -10,6 +10,8 @@ import EditAgentPage from '@/pages/agents/edit'
 import TestAgentPage from '@/pages/agents/test'
 import DashboardPage from '@/pages/dashboard'
 import SettingsPage from '@/pages/settings'
+import WorkflowsPage from '@/pages/workflows/index'
+import WorkflowEditorPage from '@/pages/workflows/editor'
 
 export default function App() {
   return (
@@ -28,6 +30,8 @@ export default function App() {
         <Route path="/agents/:id/edit" element={<ProtectedRoute><EditAgentPage /></ProtectedRoute>} />
         <Route path="/agents/:id/test" element={<ProtectedRoute><TestAgentPage /></ProtectedRoute>} />
         <Route path="/settings" element={<ProtectedRoute><SettingsPage /></ProtectedRoute>} />
+        <Route path="/workflows" element={<ProtectedRoute><WorkflowsPage /></ProtectedRoute>} />
+        <Route path="/workflows/:id" element={<ProtectedRoute><WorkflowEditorPage /></ProtectedRoute>} />
 
         <Route path="*" element={<Navigate to="/login" replace />} />
       </Routes>

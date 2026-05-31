@@ -13,6 +13,11 @@ model User {
   password            String
   name                String?
   anthropicApiKey     String?
+  openaiApiKey        String?
+  deepseekApiKey      String?
+  googleApiKey        String?
+  grokApiKey          String?
+  qwenApiKey          String?
   passwordResetToken  String?
   passwordResetExpiry DateTime?
   createdAt           DateTime  @default(now())
@@ -27,6 +32,7 @@ model Agent {
   name         String
   description  String?
   systemPrompt String?
+  provider     String   @default("anthropic")
   model        String   @default("claude-sonnet-4-6")
   temperature  Float    @default(0.7)
   maxTokens    Int      @default(1024)

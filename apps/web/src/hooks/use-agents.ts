@@ -6,6 +6,7 @@ export interface Agent {
   name: string
   description?: string | null
   systemPrompt?: string | null
+  provider: string
   model: string
   temperature: number
   maxTokens: number
@@ -18,6 +19,7 @@ export interface AgentFormData {
   name: string
   description?: string
   systemPrompt?: string
+  provider?: string
   model?: string
   temperature?: number
   maxTokens?: number
@@ -84,8 +86,15 @@ export function useSettings() {
 export function useUpdateSettings() {
   const queryClient = useQueryClient()
   return useMutation({
-    mutationFn: (data: { anthropicApiKey?: string; name?: string }) =>
-      api.patch('/settings', data).then((r) => r.data),
+    mutationFn: (data: {
+      name?: string
+      anthropicApiKey?: string
+      openaiApiKey?: string
+      deepseekApiKey?: string
+      googleApiKey?: string
+      grokApiKey?: string
+      qwenApiKey?: string
+    }) => api.patch('/settings', data).then((r) => r.data),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['settings'] }),
   })
 }

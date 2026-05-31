@@ -46,11 +46,14 @@ export default function AgentsPage() {
           {agents?.map((agent) => (
             <Card key={agent.id} className="group hover:border-primary/50 transition-colors">
               <CardHeader className="pb-2">
-                <div className="flex items-start justify-between">
+                <div className="flex items-start justify-between gap-2">
                   <CardTitle className="text-base">{agent.name}</CardTitle>
-                  <Badge variant="secondary" className="text-xs font-mono shrink-0 ml-2">
-                    {agent.model.split('-').slice(1, 3).join('-')}
-                  </Badge>
+                  <div className="flex gap-1 shrink-0">
+                    <Badge variant="outline" className="text-xs capitalize">{agent.provider}</Badge>
+                    <Badge variant="secondary" className="text-xs font-mono">
+                      {agent.model.split('-').slice(1, 3).join('-')}
+                    </Badge>
+                  </div>
                 </div>
                 {agent.description && (
                   <CardDescription className="text-xs line-clamp-2">{agent.description}</CardDescription>

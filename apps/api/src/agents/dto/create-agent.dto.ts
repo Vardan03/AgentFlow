@@ -1,4 +1,4 @@
-import { IsArray, IsInt, IsNumber, IsOptional, IsString, Max, Min } from 'class-validator'
+import { IsArray, IsIn, IsInt, IsNumber, IsOptional, IsString, Max, Min } from 'class-validator'
 
 export class CreateAgentDto {
   @IsString()
@@ -11,6 +11,10 @@ export class CreateAgentDto {
   @IsString()
   @IsOptional()
   systemPrompt?: string
+
+  @IsIn(['anthropic', 'openai', 'deepseek', 'google', 'grok', 'qwen'])
+  @IsOptional()
+  provider?: string
 
   @IsString()
   @IsOptional()

@@ -1,0 +1,36 @@
+import { Body, Controller, Delete, Get, Param, Patch, Post, Request, UseGuards } from '@nestjs/common'
+import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard'
+import { CreateWorkflowDto } from './dto/create-workflow.dto'
+import { UpdateWorkflowDto } from './dto/update-workflow.dto'
+import { WorkflowsService } from './workflows.service'
+
+@Controller('workflows')
+@UseGuards(JwtAuthGuard)
+export class WorkflowsController {
+  constructor(private workflowsService: WorkflowsService) {}
+
+  @Get()
+  findAll(@Request() req: any) {
+    return this.workflowsService.findAll(req.user.id)
+  }
+
+  @Get(':id')
+  findOne(@Param('id') id: string, @Request() req: any) {
+    return this.workflowsService.findOne(id, req.user.id)
+  }
+
+  @Post()
+  create(@Request() req: any, @Body() dto: CreateWorkflowDto) {
+    return this.workflowsService.create(req.user.id, dto)
+  }
+
+  @Patch(':id')
+  update(@Param('id') id: string, @Request() req: any, @Body() dto: UpdateWorkflowDto) {
+    return this.workflowsService.update(id, req.user.id, dto)
+  }
+
+  @Delete(':id')
+  remove(@Param('id') id: string, @Request() req: any) {
+    return this.workflowsService.remove(id, req.user.id)
+  }
+}

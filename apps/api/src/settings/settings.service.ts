@@ -14,6 +14,11 @@ export class SettingsService {
         name: true,
         email: true,
         anthropicApiKey: true,
+        openaiApiKey: true,
+        deepseekApiKey: true,
+        googleApiKey: true,
+        grokApiKey: true,
+        qwenApiKey: true,
         createdAt: true,
       },
     })
@@ -25,12 +30,22 @@ export class SettingsService {
       data: {
         ...(dto.name !== undefined && { name: dto.name }),
         ...(dto.anthropicApiKey !== undefined && { anthropicApiKey: dto.anthropicApiKey }),
+        ...(dto.openaiApiKey !== undefined && { openaiApiKey: dto.openaiApiKey }),
+        ...(dto.deepseekApiKey !== undefined && { deepseekApiKey: dto.deepseekApiKey }),
+        ...(dto.googleApiKey !== undefined && { googleApiKey: dto.googleApiKey }),
+        ...(dto.grokApiKey !== undefined && { grokApiKey: dto.grokApiKey }),
+        ...(dto.qwenApiKey !== undefined && { qwenApiKey: dto.qwenApiKey }),
       },
       select: {
         id: true,
         name: true,
         email: true,
         anthropicApiKey: true,
+        openaiApiKey: true,
+        deepseekApiKey: true,
+        googleApiKey: true,
+        grokApiKey: true,
+        qwenApiKey: true,
       },
     })
   }
