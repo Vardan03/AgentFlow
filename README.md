@@ -228,7 +228,3 @@ pnpm --filter db studio            # open Prisma Studio
 7. **Dashboard** — return to the home page to see metrics update.
 
 ---
-
-## License
-
-MIT
