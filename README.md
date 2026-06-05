@@ -1,115 +1,233 @@
 # AgentFlow
 
-A production-quality web application for creating AI agents, connecting tools, defining workflows visually, and executing automations — built with AI-assisted development.
-
-## Overview
-
-AgentFlow lets you build and orchestrate AI-powered workflows through a visual editor. Create agents with custom instructions and models, connect them to tools via MCP servers, and wire everything together into automated pipelines with triggers, conditions, and execution history.
+A visual AI agent and workflow automation platform. Create agents, wire them into workflows on a drag-and-drop canvas, and execute them with full run history and metrics.
 
 ## Tech Stack
 
 | Layer | Technologies |
-|---|---|
-| Frontend | React, Vite, TypeScript, TailwindCSS, ShadCN UI, React Query, Zustand |
-| Backend | NestJS, TypeScript |
-| Database | PostgreSQL, Prisma ORM |
-| Monorepo | Turborepo |
+|-------|-------------|
+| Frontend | React 18, Vite, TypeScript, TailwindCSS, ShadCN UI, React Query, Zustand, ReactFlow |
+| Backend | NestJS, TypeScript, Prisma ORM |
+| Database | PostgreSQL |
+| Monorepo | Turborepo + pnpm workspaces |
+
+---
 
 ## Features
 
-### Agent Management
-- Create, edit, and delete AI agents
-- Configure name, description, system instructions, and personality
-- Set temperature, model selection, enabled tools, and MCP servers
+### Agents
+- Create agents with model, system prompt, personality, temperature, and enabled tools
+- Assign MCP servers to extend agent capabilities
+- Supported providers: OpenAI, Anthropic, Google, Groq, Mistral, Grok, Qwen
 
-### MCP (Model Context Protocol) Management
-- Predefined and dynamic MCP servers
-- Endpoint and authentication configuration
-- Available tool definitions per server
+### MCP (Model Context Protocol)
+- Connect predefined or custom MCP servers (JSON-RPC 2.0 over HTTP)
+- Browse available tools and resources per server
+- Per-server endpoint and authentication configuration
 
-### Visual Workflow Builder
-- **Triggers:** Manual, Schedule, Webhook
-- **Control Flow:** Condition, Switch, Merge
-- **AI Nodes:** Run Agent, Agent Decision, Agent Review
-- **MCP Nodes:** Execute MCP Tool, Fetch MCP Resource
-- **Utility Nodes:** Delay, Set Variable, Transform Data, JSON Parser, Response, Notification, Log
+### Workflow Builder — 19 node types
+
+| Category | Nodes |
+|----------|-------|
+| Triggers | Manual, Webhook, Schedule (cron) |
+| AI | Run Agent, Agent Decision, Agent Review |
+| Control | Condition, Switch, Merge, Delay |
+| MCP | Execute Tool, Fetch Resource |
+| Utility | HTTP Request, Transform, JSON Parser, Set Variable, Log, Notification, Response |
+
+### Execution Engine
+- Recursive graph walker with `{{input}}` / `{{var.name}}` substitution
+- Branching nodes (Condition, Switch, Agent Decision, Agent Review) route to one matched branch
+- Nodes with multiple outgoing edges trigger parallel execution; `Merge` collects branch outputs
+- Merge supports **Any** (first branch wins) and **All** (wait + combine) modes
 
 ### Workflow Management
-- Create, edit, duplicate, delete workflows
-- Enable/disable workflows
-- Version control for workflows
+- Create, edit, duplicate, delete, enable / disable
+- Import / Export as JSON
+- Webhook triggers — auto-generated public URL with token
+- Schedule triggers — standard 5-field cron with live scheduling
+- Workflow templates gallery (6 built-in templates)
+- AI workflow generation (describe in plain English)
 
-### Workflow Execution
-- Manual and trigger-based execution
-- Retry and cancel support
-- Status tracking, logs, and per-node execution history
+### Execution History
+- Per-node logs: input, output, status, duration
+- Retry any past execution
+- Execution timeline on the dashboard
 
 ### Dashboard
-- Workflow and execution metrics
-- Agent usage statistics
-- MCP usage statistics
+- Total agents, workflows, executions, success rate
+- Agent usage breakdown (runs + success rate per agent node)
+- MCP usage breakdown (call volume per tool/resource node)
+- Recent execution feed with live 30s refresh
 
-## Roadmap
+---
 
-- [ ] Workflow templates and agent templates
-- [ ] Workflow import/export
-- [ ] MCP Marketplace
-- [ ] Collaboration and workflow sharing
-- [ ] AI-generated workflow creation
+## Prerequisites
 
-## Project Phases
+| Tool | Minimum version |
+|------|----------------|
+| Node.js | 20 |
+| pnpm | 9 |
+| PostgreSQL | 15 |
 
-| Phase | Scope |
-|---|---|
-| Phase 1 | Authentication, Database, Agent CRUD, MCP CRUD |
-| Phase 2 | Workflow Builder and Persistence |
-| Phase 3 | Execution Engine and Run History |
-| Phase 4 | Dashboard, Templates, AI Workflow Generation |
-| Phase 5 | Testing, Documentation, and Final Demo |
+---
 
-## Getting Started
+## Quick Start
 
-### Prerequisites
-
-- Node.js 18+
-- PostgreSQL
-- pnpm (recommended for Turborepo)
-
-### Installation
+### 1. Clone and install
 
 ```bash
-# Clone the repository
-git clone https://github.com/your-username/agentflow.git
-cd agentflow
-
-# Install dependencies
+git clone <repo-url>
+cd AgentFlow
 pnpm install
-
-# Set up environment variables
-cp .env.example .env
-# Edit .env with your database and API credentials
-
-# Run database migrations
-pnpm db:migrate
-
-# Start all apps in development mode
-pnpm dev
 ```
 
-### Environment Variables
+### 2. Configure environment
+
+Create `apps/api/.env`:
 
 ```env
 DATABASE_URL=postgresql://user:password@localhost:5432/agentflow
-JWT_SECRET=your_jwt_secret
+JWT_SECRET=change-me-to-a-long-random-string
+
+# Add whichever LLM providers you want:
+OPENAI_API_KEY=sk-...
+ANTHROPIC_API_KEY=sk-ant-...
+GOOGLE_API_KEY=...
+GROQ_API_KEY=...
+MISTRAL_API_KEY=...
 ```
 
-## Contributing
+### 3. Set up the database
 
-1. Fork the repository
-2. Create a feature branch (`git checkout -b feature/your-feature`)
-3. Commit your changes (`git commit -m 'Add your feature'`)
-4. Push to the branch (`git push origin feature/your-feature`)
-5. Open a Pull Request
+```bash
+pnpm --filter db migrate:dev
+# or, for a fresh database without migration history:
+pnpm --filter db db:push
+```
+
+### 4. Start development servers
+
+```bash
+pnpm dev
+```
+
+| Service | URL |
+|---------|-----|
+| Frontend | http://localhost:5173 |
+| Backend API | http://localhost:3000 |
+
+---
+
+## Environment Variables
+
+### `apps/api/.env`
+
+| Variable | Required | Description |
+|----------|----------|-------------|
+| `DATABASE_URL` | Yes | PostgreSQL connection string |
+| `JWT_SECRET` | Yes | Secret used to sign JWT tokens |
+| `OPENAI_API_KEY` | Optional | Enables GPT-4o and other OpenAI models |
+| `ANTHROPIC_API_KEY` | Optional | Enables Claude models |
+| `GOOGLE_API_KEY` | Optional | Enables Gemini models |
+| `GROQ_API_KEY` | Optional | Enables Groq-hosted models |
+| `MISTRAL_API_KEY` | Optional | Enables Mistral models |
+| `GROK_API_KEY` | Optional | Enables xAI Grok models |
+| `QWEN_API_KEY` | Optional | Enables Alibaba Qwen models |
+
+---
+
+## Project Structure
+
+```
+apps/
+  web/              # React + Vite + TypeScript frontend
+    src/
+      pages/        # Route-level pages (dashboard, agents, workflows, mcp)
+        workflows/
+          nodes/    # One component per node type
+      hooks/        # React Query hooks for all API calls
+      store/        # Zustand global state
+      components/
+  api/              # NestJS backend
+    src/
+      auth/         # JWT authentication (register, login, guards)
+      agents/       # Agent CRUD + LLM runner
+      mcp/          # MCP server CRUD + JSON-RPC client
+      workflows/    # Workflow CRUD + AI generator service
+      executions/   # Execution runner + history service
+      scheduler/    # Cron-based schedule trigger (NestJS schedule)
+      webhooks/     # Public webhook trigger (no JWT)
+      dashboard/    # Aggregate metrics queries
+packages/
+  db/               # Prisma schema and migrations
+  shared/           # Shared TypeScript types
+```
+
+---
+
+## Architecture
+
+### Execution Engine
+
+The `ExecutionRunnerService` walks the workflow graph recursively:
+
+```
+executeFrom(nodeId, input) → execute node → route to next node(s)
+```
+
+**Routing rules:**
+
+| Node type | Outgoing behaviour |
+|-----------|-------------------|
+| `control.condition` | Follows `yes` or `no` handle based on a JS expression |
+| `ai.agent_decision` | Agent answers yes/no; routes accordingly |
+| `ai.agent_review` | Agent answers approved/rejected; routes accordingly |
+| `control.switch` | Matches input against cases; falls back to `default` handle |
+| Any node with 2+ outputs | Parallel `Promise.all` — all outgoing branches run concurrently |
+| `control.merge` (Any) | First branch to arrive continues; others are dropped |
+| `control.merge` (All) | Waits for every branch, then joins outputs with a separator |
+
+Variable substitution is available in all text fields: `{{input}}` injects the previous node's output; `{{var.name}}` reads a stored variable.
+
+---
+
+## Common Commands
+
+```bash
+pnpm install                       # install all dependencies
+pnpm dev                           # run frontend + backend together
+pnpm --filter web dev              # frontend only
+pnpm --filter api dev              # backend only
+pnpm build                         # production build
+pnpm lint                          # lint all packages
+pnpm test                          # run all tests
+pnpm --filter api test             # backend tests only
+pnpm --filter db migrate:dev       # create and apply a new migration
+pnpm --filter db studio            # open Prisma Studio
+```
+
+---
+
+## Demo Script
+
+1. **Register** at `http://localhost:5173` and log in.
+2. **Create an agent** — Agents → New Agent — pick a model and write a system prompt.
+3. **Build a workflow** — Workflows → New Workflow:
+   - Drag **Manual Trigger** → **Run Agent** → **Response** onto the canvas
+   - Configure the Run Agent node (select your agent, optionally set an input message)
+   - Click **Save**, then **Run**
+4. **View logs** — click the History icon (clock) in the editor toolbar.
+5. **Add a condition branch**:
+   - Add a **Condition** node between Run Agent and Response
+   - Set condition to e.g. `output.length > 50`
+   - Connect YES to a **Log** node and NO to another **Log** node; both lead to a **Merge** → **Response**
+6. **Webhook trigger**:
+   - Swap Manual Trigger for **Webhook Trigger** → click "Generate webhook URL" in the settings panel
+   - `curl -X POST <url> -H "Content-Type: application/json" -d '{"text":"hello"}'`
+7. **Dashboard** — return to the home page to see metrics update.
+
+---
 
 ## License
 

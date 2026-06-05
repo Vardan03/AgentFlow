@@ -15,10 +15,10 @@ import {
   type Node,
   type Edge,
 } from '@xyflow/react'
-import { ArrowLeft, Circle, History, Play, Save, Sparkles } from 'lucide-react'
+import { ArrowLeft, Circle, Download, History, Play, Power, Save, Sparkles } from 'lucide-react'
 import { Sidebar } from '@/components/layout/sidebar'
 import { Button } from '@/components/ui/button'
-import { useWorkflow, useUpdateWorkflow, useGenerateWorkflow } from '@/hooks/use-workflows'
+import { useWorkflow, useUpdateWorkflow, useGenerateWorkflow, useGenerateWebhookToken, useToggleWorkflow } from '@/hooks/use-workflows'
 import { useExecuteWorkflow, type Execution } from '@/hooks/use-executions'
 import { ExecutionPanel } from './execution-panel'
 import { TriggerNode } from './nodes/trigger-node'
@@ -36,12 +36,19 @@ import { McpToolNode } from './nodes/mcp-tool-node'
 import { McpResourceNode } from './nodes/mcp-resource-node'
 import { AgentReviewNode } from './nodes/agent-review-node'
 import { SwitchNode } from './nodes/switch-node'
+import { WebhookTriggerNode } from './nodes/webhook-trigger-node'
+import { ScheduleTriggerNode } from './nodes/schedule-trigger-node'
+import { NotificationNode } from './nodes/notification-node'
+import { MergeNode } from './nodes/merge-node'
 import { NodePalette } from './node-palette'
 import { NodeConfig } from './node-config'
 import { GenerateDialog } from './generate-dialog'
 
 const nodeTypes = {
   'trigger.manual': TriggerNode,
+  'trigger.webhook': WebhookTriggerNode,
+  'trigger.schedule': ScheduleTriggerNode,
+  'util.notification': NotificationNode,
   'ai.run_agent': AgentNode,
   'util.http_request': HttpNode,
   'control.condition': ConditionNode,
@@ -55,6 +62,7 @@ const nodeTypes = {
   'mcp.fetch_resource': McpResourceNode,
   'ai.agent_review': AgentReviewNode,
   'control.switch': SwitchNode,
+  'control.merge': MergeNode,
   'util.response': OutputNode,
 }
 
@@ -65,7 +73,10 @@ const defaultEdgeOptions = {
 
 function getDefaultNodeData(type: string): Record<string, any> {
   switch (type) {
-    case 'trigger.manual': return { label: 'Manual Trigger' }
+    case 'trigger.manual':  return { label: 'Manual Trigger' }
+    case 'trigger.webhook':   return { label: 'Webhook Trigger' }
+    case 'trigger.schedule':  return { label: 'Schedule Trigger', cronExpression: '' }
+    case 'util.notification': return { label: 'Notification', webhookUrl: '', body: '{"text":"{{input}}"}' }
     case 'ai.run_agent':   return { label: 'Run Agent', agentId: '', agentName: '', input: '' }
     case 'util.http_request':   return { label: 'HTTP Request', method: 'GET', url: '', headers: '', body: '' }
     case 'control.condition':   return { label: 'Condition', condition: '' }
@@ -79,6 +90,7 @@ function getDefaultNodeData(type: string): Record<string, any> {
     case 'mcp.fetch_resource':  return { label: 'MCP Resource', serverId: '', serverName: '', resourceUri: '' }
     case 'ai.agent_review':     return { label: 'Agent Review', agentId: '', agentName: '', criteria: '' }
     case 'control.switch':      return { label: 'Switch', cases: [] }
+    case 'control.merge':       return { label: 'Merge', mode: 'any', separator: '\n---\n' }
     case 'util.response':       return { label: 'Response' }
     default:                    return { label: type }
   }
@@ -158,6 +170,7 @@ function WorkflowEditorInner() {
   const { id } = useParams<{ id: string }>()
   const { data: workflow, isLoading } = useWorkflow(id!)
   const updateWorkflow = useUpdateWorkflow(id!)
+  const toggleWorkflow = useToggleWorkflow()
   const { screenToFlowPosition } = useReactFlow()
 
   const [nodes, setNodes, onNodesChange] = useNodesState(DEFAULT_NODES)
@@ -291,7 +304,39 @@ function WorkflowEditorInner() {
             <span className="text-xs text-green-500">Saved</span>
           )}
 
+          <button
+            title={workflow?.isEnabled ? 'Disable workflow' : 'Enable workflow'}
+            disabled={toggleWorkflow.isPending}
+            onClick={() => workflow && toggleWorkflow.mutate({ id: id!, isEnabled: !workflow.isEnabled })}
+            className={`flex items-center gap-1.5 px-2 py-1 rounded-md text-xs font-medium transition-colors border ${
+              workflow?.isEnabled
+                ? 'border-emerald-600/50 text-emerald-400 bg-emerald-500/10 hover:bg-emerald-500/20'
+                : 'border-border text-muted-foreground hover:bg-accent'
+            }`}
+          >
+            <Power size={11} />
+            {workflow?.isEnabled ? 'Active' : 'Draft'}
+          </button>
+
           <div className="ml-auto flex items-center gap-2">
+            <Button
+              size="sm"
+              variant="ghost"
+              className="text-muted-foreground hover:text-foreground"
+              onClick={() => {
+                const json = JSON.stringify({ name: workflowName, graph: { nodes, edges } }, null, 2)
+                const blob = new Blob([json], { type: 'application/json' })
+                const url = URL.createObjectURL(blob)
+                const a = document.createElement('a')
+                a.href = url
+                a.download = `${workflowName.replace(/\s+/g, '-').toLowerCase()}.json`
+                a.click()
+                URL.revokeObjectURL(url)
+              }}
+            >
+              <Download size={13} className="mr-1.5" />
+              Export
+            </Button>
             <Link to={`/workflows/${id}/history`}>
               <Button size="sm" variant="ghost" className="text-muted-foreground hover:text-foreground">
                 <History size={13} className="mr-1.5" />
@@ -371,6 +416,7 @@ function WorkflowEditorInner() {
           {selectedNode && (
             <NodeConfig
               node={selectedNode}
+              workflowId={id!}
               onUpdate={updateNodeData}
               onDelete={deleteNode}
               onClose={() => setSelectedNode(null)}

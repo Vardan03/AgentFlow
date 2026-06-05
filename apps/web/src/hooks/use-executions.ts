@@ -59,3 +59,16 @@ export function useRecentExecutions() {
     refetchInterval: 30_000,
   })
 }
+
+export interface UsageStats {
+  agentUsage: { label: string; runs: number; successCount: number }[]
+  mcpUsage:   { label: string; runs: number }[]
+}
+
+export function useUsageStats() {
+  return useQuery<UsageStats>({
+    queryKey: ['executions', 'usage'],
+    queryFn: () => api.get('/executions/usage/me').then((r) => r.data),
+    staleTime: 60_000,
+  })
+}

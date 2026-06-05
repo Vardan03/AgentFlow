@@ -1,10 +1,11 @@
-import { Copy, GitFork, History, Pencil, Plus, Power, Trash2 } from 'lucide-react'
-import { useNavigate } from 'react-router-dom'
+import { Copy, GitFork, History, LayoutTemplate, Pencil, Plus, Power, Trash2, Upload } from 'lucide-react'
+import { Link, useNavigate } from 'react-router-dom'
+import { useRef } from 'react'
 import { AppLayout } from '@/components/layout/app-layout'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { useCreateWorkflow, useDeleteWorkflow, useDuplicateWorkflow, useToggleWorkflow, useWorkflows } from '@/hooks/use-workflows'
+import { useCreateWorkflow, useDeleteWorkflow, useDuplicateWorkflow, useImportWorkflow, useToggleWorkflow, useWorkflows } from '@/hooks/use-workflows'
 
 export default function WorkflowsPage() {
   const { data: workflows, isLoading } = useWorkflows()
@@ -12,7 +13,29 @@ export default function WorkflowsPage() {
   const deleteWorkflow = useDeleteWorkflow()
   const duplicateWorkflow = useDuplicateWorkflow()
   const toggleWorkflow = useToggleWorkflow()
+  const importWorkflow = useImportWorkflow()
   const navigate = useNavigate()
+  const fileInputRef = useRef<HTMLInputElement>(null)
+
+  const handleImport = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+    const reader = new FileReader()
+    reader.onload = (ev) => {
+      try {
+        const parsed = JSON.parse(ev.target?.result as string)
+        const name = parsed.name ? `${parsed.name} (imported)` : 'Imported workflow'
+        const graph = parsed.graph ?? { nodes: [], edges: [] }
+        importWorkflow.mutate({ name, graph }, {
+          onSuccess: (wf) => navigate(`/workflows/${wf.id}`),
+        })
+      } catch {
+        alert('Invalid workflow file.')
+      }
+    }
+    reader.readAsText(file)
+    e.target.value = ''
+  }
 
   const handleCreate = () => {
     createWorkflow.mutate({ name: 'Untitled workflow' }, {
@@ -28,10 +51,23 @@ export default function WorkflowsPage() {
             <h1 className="text-2xl font-bold">Workflows</h1>
             <p className="text-muted-foreground text-sm mt-1">Build and automate AI-powered workflows</p>
           </div>
-          <Button onClick={handleCreate} disabled={createWorkflow.isPending}>
-            <Plus size={16} className="mr-2" />
-            {createWorkflow.isPending ? 'Creating…' : 'New workflow'}
-          </Button>
+          <div className="flex items-center gap-2">
+            <input ref={fileInputRef} type="file" accept=".json" className="hidden" onChange={handleImport} />
+            <Link to="/workflows/templates">
+              <Button variant="outline">
+                <LayoutTemplate size={15} className="mr-2" />
+                Templates
+              </Button>
+            </Link>
+            <Button variant="outline" onClick={() => fileInputRef.current?.click()} disabled={importWorkflow.isPending}>
+              <Upload size={15} className="mr-2" />
+              {importWorkflow.isPending ? 'Importing…' : 'Import'}
+            </Button>
+            <Button onClick={handleCreate} disabled={createWorkflow.isPending}>
+              <Plus size={16} className="mr-2" />
+              {createWorkflow.isPending ? 'Creating…' : 'New workflow'}
+            </Button>
+          </div>
         </div>
 
         {isLoading && <p className="text-muted-foreground">Loading…</p>}

@@ -13,7 +13,12 @@ export interface NodeLog {
   durationMs: number
 }
 
-const BRANCHING_TYPES = new Set(['control.condition', 'ai.agent_decision', 'ai.agent_review', 'control.switch'])
+const BRANCHING_TYPES = new Set([
+  'control.condition',
+  'ai.agent_decision',
+  'ai.agent_review',
+  'control.switch',
+])
 
 @Injectable()
 export class ExecutionRunnerService {
@@ -23,7 +28,7 @@ export class ExecutionRunnerService {
     private mcpService: McpService,
   ) {}
 
-  async run(workflowId: string, userId: string) {
+  async run(workflowId: string, userId: string, initialInput: string | null = null) {
     const workflow = await this.prisma.workflow.findUnique({ where: { id: workflowId } })
     if (!workflow || workflow.userId !== userId) throw new Error('Workflow not found')
 
@@ -38,81 +43,141 @@ export class ExecutionRunnerService {
     const logs: NodeLog[] = []
     const variables: Record<string, string> = {}
 
+    // Pre-compute expected in-degree for each merge node
+    const mergeExpected = new Map<string, number>()
+    for (const node of nodes) {
+      if (node.type === 'control.merge') {
+        mergeExpected.set(node.id, edges.filter((e: any) => e.target === node.id).length)
+      }
+    }
+    const mergeCollector = new Map<string, (string | null)[]>()
+    const visitedMergeNodes = new Set<string>()
+
     try {
       const triggerNode = nodes.find((n: any) => n.type?.startsWith('trigger.'))
       if (!triggerNode) throw new Error('No trigger node found in workflow')
 
-      let currentNodeId: string | null = triggerNode.id
-      let currentInput: string | null = null
-
-      while (currentNodeId) {
-        const node = nodes.find((n: any) => n.id === currentNodeId)
-        if (!node) break
-
-        const startMs = Date.now()
-        let output: string | null = null
-        let nodeStatus: 'success' | 'failed' = 'success'
-
-        try {
-          output = await this.executeNode(node, currentInput, userId, variables)
-        } catch (err: any) {
-          nodeStatus = 'failed'
-          output = err?.message ?? 'Unknown error'
-          logs.push({
-            nodeId: node.id, type: node.type,
-            label: node.data?.label ?? node.type,
-            status: nodeStatus, input: currentInput, output,
-            durationMs: Date.now() - startMs,
-          })
-          await this.prisma.execution.update({
-            where: { id: execution.id },
-            data: { status: 'failed', finishedAt: new Date(), logs: logs as any },
-          })
-          return { ...execution, status: 'failed', logs }
-        }
-
-        logs.push({
-          nodeId: node.id, type: node.type,
-          label: node.data?.label ?? node.type,
-          status: nodeStatus, input: currentInput, output,
-          durationMs: Date.now() - startMs,
-        })
-
-        // Branching nodes pass the original input to the next node, not 'yes'/'no'
-        const isBranching = BRANCHING_TYPES.has(node.type)
-        const inputBeforeNode: string | null = currentInput
-        currentInput = isBranching ? inputBeforeNode : output
-
-        // Route to next node
-        const outgoing = edges.filter((e: any) => e.source === currentNodeId)
-        if (node.type === 'control.switch') {
-          const edge =
-            outgoing.find((e: any) => e.sourceHandle === output) ??
-            outgoing.find((e: any) => e.sourceHandle === 'default') ??
-            outgoing[0]
-          currentNodeId = edge?.target ?? null
-        } else if (isBranching) {
-          const handle = output === 'yes' ? 'yes' : 'no'
-          const edge = outgoing.find((e: any) => e.sourceHandle === handle) ?? outgoing[0]
-          currentNodeId = edge?.target ?? null
-        } else {
-          currentNodeId = outgoing[0]?.target ?? null
-        }
-      }
+      const finalOutput = await this.executeFrom(
+        triggerNode.id, initialInput, nodes, edges, userId,
+        variables, logs, mergeExpected, mergeCollector, visitedMergeNodes,
+      )
 
       await this.prisma.execution.update({
         where: { id: execution.id },
         data: { status: 'success', finishedAt: new Date(), logs: logs as any },
       })
 
-      return { ...execution, status: 'success', logs, output: currentInput }
+      return { ...execution, status: 'success', logs, output: finalOutput }
     } catch (err: any) {
       await this.prisma.execution.update({
         where: { id: execution.id },
         data: { status: 'failed', finishedAt: new Date(), logs: logs as any },
       })
-      throw err
+      return { ...execution, status: 'failed', logs }
     }
+  }
+
+  private async executeFrom(
+    startId: string,
+    input: string | null,
+    nodes: any[],
+    edges: any[],
+    userId: string,
+    variables: Record<string, string>,
+    logs: NodeLog[],
+    mergeExpected: Map<string, number>,
+    mergeCollector: Map<string, (string | null)[]>,
+    visitedMergeNodes: Set<string>,
+  ): Promise<string | null> {
+    let currentId: string | null = startId
+    let currentInput: string | null = input
+
+    while (currentId) {
+      const node = nodes.find((n: any) => n.id === currentId)
+      if (!node) break
+
+      // Merge node: collect inputs from parallel branches before executing
+      if (node.type === 'control.merge') {
+        const mode: string = node.data?.mode ?? 'any'
+
+        if (mode === 'all') {
+          const collected = mergeCollector.get(currentId) ?? []
+          collected.push(currentInput)
+          mergeCollector.set(currentId, collected)
+          const expected = mergeExpected.get(currentId) ?? 1
+          if (collected.length < expected) {
+            return currentInput // wait for remaining branches
+          }
+          const separator: string = node.data?.separator || '\n---\n'
+          currentInput = collected.filter((v) => v !== null).join(separator) || null
+        } else {
+          // "any" mode: first branch to arrive continues; later arrivals are silently dropped
+          if (visitedMergeNodes.has(currentId)) {
+            return currentInput
+          }
+          visitedMergeNodes.add(currentId)
+        }
+      }
+
+      const startMs = Date.now()
+      let output: string | null = null
+      let nodeStatus: 'success' | 'failed' = 'success'
+
+      try {
+        output = await this.executeNode(node, currentInput, userId, variables)
+      } catch (err: any) {
+        nodeStatus = 'failed'
+        output = err?.message ?? 'Unknown error'
+        logs.push({
+          nodeId: node.id, type: node.type,
+          label: node.data?.label ?? node.type,
+          status: nodeStatus, input: currentInput, output,
+          durationMs: Date.now() - startMs,
+        })
+        throw err
+      }
+
+      logs.push({
+        nodeId: node.id, type: node.type,
+        label: node.data?.label ?? node.type,
+        status: nodeStatus, input: currentInput, output,
+        durationMs: Date.now() - startMs,
+      })
+
+      const isBranching = BRANCHING_TYPES.has(node.type)
+      const inputBeforeNode: string | null = currentInput
+      const outgoing = edges.filter((e: any) => e.source === currentId)
+
+      if (node.type === 'control.switch') {
+        const edge =
+          outgoing.find((e: any) => e.sourceHandle === output) ??
+          outgoing.find((e: any) => e.sourceHandle === 'default') ??
+          outgoing[0]
+        currentInput = inputBeforeNode
+        currentId = edge?.target ?? null
+      } else if (isBranching) {
+        const handle = output === 'yes' ? 'yes' : 'no'
+        const edge = outgoing.find((e: any) => e.sourceHandle === handle) ?? outgoing[0]
+        currentInput = inputBeforeNode
+        currentId = edge?.target ?? null
+      } else if (outgoing.length > 1) {
+        // Parallel split: fan out to all outgoing edges concurrently
+        await Promise.all(
+          outgoing.map((e: any) =>
+            this.executeFrom(
+              e.target, output, nodes, edges, userId,
+              variables, logs, mergeExpected, mergeCollector, visitedMergeNodes,
+            ),
+          ),
+        )
+        return output
+      } else {
+        currentInput = output
+        currentId = outgoing[0]?.target ?? null
+      }
+    }
+
+    return currentInput
   }
 
   private sub(s: string, input: string | null, variables: Record<string, string>): string {
@@ -129,7 +194,16 @@ export class ExecutionRunnerService {
   ): Promise<string | null> {
     switch (node.type) {
       case 'trigger.manual':
-        return null
+        return input
+
+      case 'trigger.webhook':
+        return input
+
+      case 'trigger.schedule':
+        return input
+
+      case 'control.merge':
+        return input
 
       case 'ai.run_agent': {
         const agentId = node.data?.agentId
@@ -282,6 +356,32 @@ export class ExecutionRunnerService {
         if (!uriTemplate) throw new Error(`Node "${node.data?.label}": resource URI is required`)
         const uri = this.sub(uriTemplate, input, variables)
         return this.mcpService.readResource(serverId, uri)
+      }
+
+      case 'util.notification': {
+        const webhookUrl = node.data?.webhookUrl
+        if (!webhookUrl) return input
+        const bodyTemplate = node.data?.body || '{"text":"{{input}}"}'
+        const bodyJson = this.sub(bodyTemplate, input, variables)
+        let bodyObj: any
+        try { bodyObj = JSON.parse(bodyJson) } catch { throw new Error(`Node "${node.data?.label}": body is not valid JSON`) }
+        const ctrl = new AbortController()
+        const timer = setTimeout(() => ctrl.abort(), 10_000)
+        try {
+          const res = await fetch(webhookUrl, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(bodyObj),
+            signal: ctrl.signal,
+          })
+          clearTimeout(timer)
+          if (!res.ok) throw new Error(`Notification failed: HTTP ${res.status}`)
+        } catch (err: any) {
+          clearTimeout(timer)
+          if (err.name === 'AbortError') throw new Error(`Node "${node.data?.label}": webhook timed out`)
+          throw err
+        }
+        return input
       }
 
       case 'ai.agent_review': {

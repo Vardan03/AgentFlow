@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { useAgents } from '@/hooks/use-agents'
 import { useWorkflows } from '@/hooks/use-workflows'
-import { useExecutionCount, useRecentExecutions } from '@/hooks/use-executions'
+import { useExecutionCount, useRecentExecutions, useUsageStats } from '@/hooks/use-executions'
 import { useAuthStore } from '@/store/auth.store'
 import type { RecentExecution } from '@/hooks/use-executions'
 import type { Workflow as WorkflowType } from '@/hooks/use-workflows'
@@ -118,6 +118,7 @@ export default function DashboardPage() {
   const { data: workflows } = useWorkflows()
   const { data: executionCount } = useExecutionCount()
   const { data: recentExecutions } = useRecentExecutions()
+  const { data: usageStats } = useUsageStats()
 
   const successCount = recentExecutions?.filter((e) => e.status === 'success').length ?? 0
   const recentTotal = recentExecutions?.length ?? 0
@@ -168,6 +169,68 @@ export default function DashboardPage() {
             sub={recentTotal > 0 ? `last ${recentTotal} runs` : 'no runs yet'}
           />
         </div>
+
+        {/* Usage stats */}
+        {usageStats && (usageStats.agentUsage.length > 0 || usageStats.mcpUsage.length > 0) && (
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-8">
+            {usageStats.agentUsage.length > 0 && (
+              <Card>
+                <CardHeader className="pb-3">
+                  <CardTitle className="text-sm font-semibold">Agent Usage</CardTitle>
+                </CardHeader>
+                <CardContent className="px-6 pb-4 space-y-3">
+                  {usageStats.agentUsage.map((item) => {
+                    const rate = item.runs > 0 ? Math.round((item.successCount / item.runs) * 100) : 0
+                    return (
+                      <div key={item.label}>
+                        <div className="flex items-center justify-between mb-1">
+                          <span className="text-xs font-medium truncate max-w-[60%]">{item.label}</span>
+                          <span className="text-xs text-muted-foreground tabular-nums">
+                            {item.runs} run{item.runs !== 1 ? 's' : ''} · {rate}% success
+                          </span>
+                        </div>
+                        <div className="h-1.5 rounded-full bg-muted overflow-hidden">
+                          <div
+                            className="h-full rounded-full bg-blue-500"
+                            style={{ width: `${rate}%` }}
+                          />
+                        </div>
+                      </div>
+                    )
+                  })}
+                </CardContent>
+              </Card>
+            )}
+            {usageStats.mcpUsage.length > 0 && (
+              <Card>
+                <CardHeader className="pb-3">
+                  <CardTitle className="text-sm font-semibold">MCP Usage</CardTitle>
+                </CardHeader>
+                <CardContent className="px-6 pb-4 space-y-3">
+                  {(() => {
+                    const max = Math.max(...usageStats.mcpUsage.map((i) => i.runs), 1)
+                    return usageStats.mcpUsage.map((item) => (
+                      <div key={item.label}>
+                        <div className="flex items-center justify-between mb-1">
+                          <span className="text-xs font-medium truncate max-w-[60%]">{item.label}</span>
+                          <span className="text-xs text-muted-foreground tabular-nums">
+                            {item.runs} call{item.runs !== 1 ? 's' : ''}
+                          </span>
+                        </div>
+                        <div className="h-1.5 rounded-full bg-muted overflow-hidden">
+                          <div
+                            className="h-full rounded-full bg-emerald-500"
+                            style={{ width: `${(item.runs / max) * 100}%` }}
+                          />
+                        </div>
+                      </div>
+                    ))
+                  })()}
+                </CardContent>
+              </Card>
+            )}
+          </div>
+        )}
 
         {/* Content */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">

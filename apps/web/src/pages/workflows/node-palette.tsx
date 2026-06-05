@@ -1,4 +1,4 @@
-import { Bot, Brain, Braces, Clock, FolderOpen, GitBranch, Globe, Layers, MessageSquare, Plug2, ShieldCheck, Tags, Terminal, Wand2, Zap } from 'lucide-react'
+import { Bell, Bot, Brain, Braces, CalendarClock, Clock, FolderOpen, GitBranch, Globe, Layers, Merge, MessageSquare, Plug2, ShieldCheck, Tags, Terminal, Wand2, Webhook, Zap } from 'lucide-react'
 
 const PALETTE_ITEMS = [
   {
@@ -6,6 +6,24 @@ const PALETTE_ITEMS = [
     label: 'Manual Trigger',
     description: 'Start the workflow',
     icon: Zap,
+    color: 'text-green-400',
+    border: 'border-green-600/50 hover:border-green-500',
+    bg: 'bg-green-500/10',
+  },
+  {
+    type: 'trigger.webhook',
+    label: 'Webhook Trigger',
+    description: 'Trigger via HTTP POST',
+    icon: Webhook,
+    color: 'text-green-400',
+    border: 'border-green-600/50 hover:border-green-500',
+    bg: 'bg-green-500/10',
+  },
+  {
+    type: 'trigger.schedule',
+    label: 'Schedule Trigger',
+    description: 'Run on a cron schedule',
+    icon: CalendarClock,
     color: 'text-green-400',
     border: 'border-green-600/50 hover:border-green-500',
     bg: 'bg-green-500/10',
@@ -45,6 +63,15 @@ const PALETTE_ITEMS = [
     color: 'text-orange-400',
     border: 'border-orange-600/50 hover:border-orange-500',
     bg: 'bg-orange-500/10',
+  },
+  {
+    type: 'control.merge',
+    label: 'Merge',
+    description: 'Join parallel branches',
+    icon: Merge,
+    color: 'text-pink-400',
+    border: 'border-pink-600/50 hover:border-pink-500',
+    bg: 'bg-pink-500/10',
   },
   {
     type: 'util.http_request',
@@ -126,6 +153,15 @@ const PALETTE_ITEMS = [
     color: 'text-sky-400',
     border: 'border-sky-600/50 hover:border-sky-500',
     bg: 'bg-sky-500/10',
+  },
+  {
+    type: 'util.notification',
+    label: 'Notification',
+    description: 'Send to webhook URL',
+    icon: Bell,
+    color: 'text-yellow-400',
+    border: 'border-yellow-600/50 hover:border-yellow-500',
+    bg: 'bg-yellow-500/10',
   },
   {
     type: 'util.response',

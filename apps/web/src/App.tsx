@@ -14,6 +14,7 @@ import McpPage from '@/pages/mcp/index'
 import WorkflowsPage from '@/pages/workflows/index'
 import WorkflowEditorPage from '@/pages/workflows/editor'
 import WorkflowHistoryPage from '@/pages/workflows/history'
+import WorkflowTemplatesPage from '@/pages/workflows/templates'
 
 export default function App() {
   return (
@@ -36,6 +37,7 @@ export default function App() {
         <Route path="/workflows" element={<ProtectedRoute><WorkflowsPage /></ProtectedRoute>} />
         <Route path="/workflows/:id" element={<ProtectedRoute><WorkflowEditorPage /></ProtectedRoute>} />
         <Route path="/workflows/:id/history" element={<ProtectedRoute><WorkflowHistoryPage /></ProtectedRoute>} />
+        <Route path="/workflows/templates" element={<ProtectedRoute><WorkflowTemplatesPage /></ProtectedRoute>} />
 
         <Route path="*" element={<Navigate to="/login" replace />} />
       </Routes>

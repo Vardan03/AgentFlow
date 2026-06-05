@@ -35,4 +35,9 @@ export class ExecutionsController {
   findRecent(@Request() req: any) {
     return this.executionsService.findRecentForUser(req.user.id)
   }
+
+  @Get('executions/usage/me')
+  getUsageStats(@Request() req: any) {
+    return this.executionsService.getUsageStats(req.user.id)
+  }
 }

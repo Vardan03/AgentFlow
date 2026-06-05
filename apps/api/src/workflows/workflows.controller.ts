@@ -44,6 +44,11 @@ export class WorkflowsController {
     return this.workflowsService.duplicate(id, req.user.id)
   }
 
+  @Post(':id/webhook-token')
+  generateWebhookToken(@Param('id') id: string, @Request() req: any) {
+    return this.workflowsService.generateWebhookToken(id, req.user.id)
+  }
+
   @Delete(':id')
   remove(@Param('id') id: string, @Request() req: any) {
     return this.workflowsService.remove(id, req.user.id)

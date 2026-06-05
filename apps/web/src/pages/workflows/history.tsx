@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
-import { ArrowLeft, CheckCircle2, ChevronDown, ChevronRight, Clock, Loader2, Play, XCircle } from 'lucide-react'
+import { ArrowLeft, CheckCircle2, ChevronDown, ChevronRight, Clock, Loader2, Play, RotateCcw, XCircle } from 'lucide-react'
 import { AppLayout } from '@/components/layout/app-layout'
 import { Button } from '@/components/ui/button'
 import { useWorkflow } from '@/hooks/use-workflows'
@@ -53,7 +53,7 @@ function NodeLogRow({ log }: { log: NodeLog }) {
   )
 }
 
-function ExecutionRow({ execution }: { execution: Execution }) {
+function ExecutionRow({ execution, onRetry, retrying }: { execution: Execution; onRetry: () => void; retrying: boolean }) {
   const [expanded, setExpanded] = useState(false)
   const logs = (execution.logs ?? []) as NodeLog[]
 
@@ -73,22 +73,34 @@ function ExecutionRow({ execution }: { execution: Execution }) {
 
   return (
     <div className="border border-border rounded-lg overflow-hidden">
-      <button
-        className="w-full flex items-center gap-3 px-4 py-3 bg-card hover:bg-accent/50 transition-colors text-left"
-        onClick={() => setExpanded((v) => !v)}
-      >
-        <StatusIcon />
-        <span className={`text-sm font-semibold capitalize ${statusColor}`}>{execution.status}</span>
-        <span className="text-xs text-muted-foreground flex-1 text-left">{timeAgo(execution.createdAt)}</span>
-        <span className="text-xs text-muted-foreground tabular-nums font-mono shrink-0">
-          {formatDuration(execution.startedAt, execution.finishedAt)}
-        </span>
-        <span className="text-xs text-muted-foreground shrink-0">{logs.length} nodes</span>
-        {expanded
-          ? <ChevronDown size={13} className="text-muted-foreground shrink-0" />
-          : <ChevronRight size={13} className="text-muted-foreground shrink-0" />
-        }
-      </button>
+      <div className="flex items-center gap-3 px-4 py-3 bg-card">
+        <button
+          className="flex items-center gap-3 flex-1 text-left hover:opacity-80 transition-opacity"
+          onClick={() => setExpanded((v) => !v)}
+        >
+          <StatusIcon />
+          <span className={`text-sm font-semibold capitalize ${statusColor}`}>{execution.status}</span>
+          <span className="text-xs text-muted-foreground flex-1">{timeAgo(execution.createdAt)}</span>
+          <span className="text-xs text-muted-foreground tabular-nums font-mono shrink-0">
+            {formatDuration(execution.startedAt, execution.finishedAt)}
+          </span>
+          <span className="text-xs text-muted-foreground shrink-0">{logs.length} nodes</span>
+          {expanded
+            ? <ChevronDown size={13} className="text-muted-foreground shrink-0" />
+            : <ChevronRight size={13} className="text-muted-foreground shrink-0" />
+          }
+        </button>
+        <Button
+          size="sm"
+          variant="ghost"
+          className="h-7 px-2 text-muted-foreground hover:text-foreground shrink-0"
+          title="Re-run"
+          disabled={retrying}
+          onClick={(e) => { e.stopPropagation(); onRetry() }}
+        >
+          <RotateCcw size={12} className={retrying ? 'animate-spin' : ''} />
+        </Button>
+      </div>
       {expanded && (
         <div className="border-t border-border bg-muted/10">
           {logs.length === 0 ? (
@@ -156,7 +168,12 @@ export default function WorkflowHistoryPage() {
         {executions && executions.length > 0 && (
           <div className="space-y-2">
             {executions.map((execution) => (
-              <ExecutionRow key={execution.id} execution={execution} />
+              <ExecutionRow
+                key={execution.id}
+                execution={execution}
+                retrying={execute.isPending}
+                onRetry={() => execute.mutate(undefined, { onSuccess: () => refetch() })}
+              />
             ))}
           </div>
         )}

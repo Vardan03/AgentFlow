@@ -9,5 +9,6 @@ import { ExecutionsService } from './executions.service'
   imports: [AgentsModule, McpModule],
   controllers: [ExecutionsController],
   providers: [ExecutionsService, ExecutionRunnerService],
+  exports: [ExecutionRunnerService],
 })
 export class ExecutionsModule {}

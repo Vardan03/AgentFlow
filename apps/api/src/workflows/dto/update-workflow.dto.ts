@@ -16,4 +16,8 @@ export class UpdateWorkflowDto {
   @IsBoolean()
   @IsOptional()
   isEnabled?: boolean
+
+  @IsString()
+  @IsOptional()
+  cronExpression?: string | null
 }

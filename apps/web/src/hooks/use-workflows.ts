@@ -8,6 +8,8 @@ export interface Workflow {
   graph: { nodes: any[]; edges: any[] }
   isEnabled: boolean
   version: number
+  webhookToken?: string | null
+  cronExpression?: string | null
   createdAt: string
   updatedAt: string
 }
@@ -39,7 +41,7 @@ export function useCreateWorkflow() {
 export function useUpdateWorkflow(id: string) {
   const queryClient = useQueryClient()
   return useMutation({
-    mutationFn: (data: { name?: string; description?: string; graph?: object; isEnabled?: boolean }) =>
+    mutationFn: (data: { name?: string; description?: string; graph?: object; isEnabled?: boolean; cronExpression?: string | null }) =>
       api.patch(`/workflows/${id}`, data).then((r) => r.data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['workflows'] })
@@ -70,6 +72,27 @@ export function useToggleWorkflow() {
   return useMutation({
     mutationFn: ({ id, isEnabled }: { id: string; isEnabled: boolean }) =>
       api.patch(`/workflows/${id}`, { isEnabled }).then((r) => r.data),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['workflows'] }),
+  })
+}
+
+export function useGenerateWebhookToken(id: string) {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: () =>
+      api.post(`/workflows/${id}/webhook-token`).then((r) => r.data as Workflow),
+    onSuccess: (updated) => {
+      queryClient.setQueryData(['workflows', id], updated)
+      queryClient.invalidateQueries({ queryKey: ['workflows'] })
+    },
+  })
+}
+
+export function useImportWorkflow() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: (data: { name: string; graph: object }) =>
+      api.post('/workflows', data).then((r) => r.data as Workflow),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['workflows'] }),
   })
 }

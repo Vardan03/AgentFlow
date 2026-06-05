@@ -57,14 +57,16 @@ model McpServer {
 }
 
 model Workflow {
-  id          String   @id @default(cuid())
-  name        String
-  description String?
-  graph       Json
-  isEnabled   Boolean  @default(false)
-  version     Int      @default(1)
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  id           String   @id @default(cuid())
+  name         String
+  description  String?
+  graph        Json
+  isEnabled    Boolean  @default(false)
+  version      Int      @default(1)
+  webhookToken   String?  @unique
+  cronExpression String?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
 
   userId     String
   user       User        @relation(fields: [userId], references: [id], onDelete: Cascade)
