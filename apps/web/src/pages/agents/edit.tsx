@@ -17,7 +17,7 @@ export default function EditAgentPage() {
       <div className="p-8 max-w-2xl">
         <h1 className="text-2xl font-bold mb-6">Edit agent</h1>
         <AgentForm
-          defaultValues={agent}
+          defaultValues={{ ...agent, description: agent.description ?? undefined, systemPrompt: agent.systemPrompt ?? undefined }}
           submitLabel="Save changes"
           isPending={updateAgent.isPending}
           error={(updateAgent.error as any)?.response?.data?.message ?? null}

@@ -1,15 +1,17 @@
-import { GitFork, Pencil, Plus, Trash2 } from 'lucide-react'
+import { Copy, GitFork, History, Pencil, Plus, Power, Trash2 } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
 import { AppLayout } from '@/components/layout/app-layout'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { useCreateWorkflow, useDeleteWorkflow, useWorkflows } from '@/hooks/use-workflows'
+import { useCreateWorkflow, useDeleteWorkflow, useDuplicateWorkflow, useToggleWorkflow, useWorkflows } from '@/hooks/use-workflows'
 
 export default function WorkflowsPage() {
   const { data: workflows, isLoading } = useWorkflows()
   const createWorkflow = useCreateWorkflow()
   const deleteWorkflow = useDeleteWorkflow()
+  const duplicateWorkflow = useDuplicateWorkflow()
+  const toggleWorkflow = useToggleWorkflow()
   const navigate = useNavigate()
 
   const handleCreate = () => {
@@ -71,7 +73,7 @@ export default function WorkflowsPage() {
                     {nodeCount} {nodeCount === 1 ? 'node' : 'nodes'} ·{' '}
                     Updated {new Date(workflow.updatedAt).toLocaleDateString()}
                   </p>
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-1.5">
                     <Button
                       size="sm"
                       className="flex-1"
@@ -83,6 +85,34 @@ export default function WorkflowsPage() {
                     <Button
                       size="sm"
                       variant="outline"
+                      title="Execution history"
+                      onClick={() => navigate(`/workflows/${workflow.id}/history`)}
+                    >
+                      <History size={13} />
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      title="Duplicate"
+                      disabled={duplicateWorkflow.isPending}
+                      onClick={() => duplicateWorkflow.mutate(workflow.id)}
+                    >
+                      <Copy size={13} />
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      title={workflow.isEnabled ? 'Disable' : 'Enable'}
+                      className={workflow.isEnabled ? 'text-emerald-400 border-emerald-600/50 hover:border-emerald-500' : 'text-muted-foreground'}
+                      disabled={toggleWorkflow.isPending}
+                      onClick={() => toggleWorkflow.mutate({ id: workflow.id, isEnabled: !workflow.isEnabled })}
+                    >
+                      <Power size={13} />
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      title="Delete"
                       className="text-destructive hover:text-destructive"
                       disabled={deleteWorkflow.isPending}
                       onClick={() => {

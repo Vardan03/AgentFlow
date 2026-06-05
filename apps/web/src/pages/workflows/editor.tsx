@@ -13,22 +13,48 @@ import {
   MarkerType,
   type Connection,
   type Node,
+  type Edge,
 } from '@xyflow/react'
-import { ArrowLeft, Circle, Save } from 'lucide-react'
+import { ArrowLeft, Circle, History, Play, Save, Sparkles } from 'lucide-react'
 import { Sidebar } from '@/components/layout/sidebar'
 import { Button } from '@/components/ui/button'
-import { useWorkflow, useUpdateWorkflow } from '@/hooks/use-workflows'
+import { useWorkflow, useUpdateWorkflow, useGenerateWorkflow } from '@/hooks/use-workflows'
+import { useExecuteWorkflow, type Execution } from '@/hooks/use-executions'
+import { ExecutionPanel } from './execution-panel'
 import { TriggerNode } from './nodes/trigger-node'
 import { AgentNode } from './nodes/agent-node'
 import { ConditionNode } from './nodes/condition-node'
 import { OutputNode } from './nodes/output-node'
+import { HttpNode } from './nodes/http-node'
+import { LogNode } from './nodes/log-node'
+import { SetVariableNode } from './nodes/set-variable-node'
+import { JsonParserNode } from './nodes/json-parser-node'
+import { TransformNode } from './nodes/transform-node'
+import { DelayNode } from './nodes/delay-node'
+import { AgentDecisionNode } from './nodes/agent-decision-node'
+import { McpToolNode } from './nodes/mcp-tool-node'
+import { McpResourceNode } from './nodes/mcp-resource-node'
+import { AgentReviewNode } from './nodes/agent-review-node'
+import { SwitchNode } from './nodes/switch-node'
 import { NodePalette } from './node-palette'
 import { NodeConfig } from './node-config'
+import { GenerateDialog } from './generate-dialog'
 
 const nodeTypes = {
   'trigger.manual': TriggerNode,
   'ai.run_agent': AgentNode,
+  'util.http_request': HttpNode,
   'control.condition': ConditionNode,
+  'control.delay': DelayNode,
+  'ai.agent_decision': AgentDecisionNode,
+  'util.set_variable': SetVariableNode,
+  'util.transform_data': TransformNode,
+  'util.json_parser': JsonParserNode,
+  'util.log': LogNode,
+  'mcp.execute_tool': McpToolNode,
+  'mcp.fetch_resource': McpResourceNode,
+  'ai.agent_review': AgentReviewNode,
+  'control.switch': SwitchNode,
   'util.response': OutputNode,
 }
 
@@ -40,10 +66,21 @@ const defaultEdgeOptions = {
 function getDefaultNodeData(type: string): Record<string, any> {
   switch (type) {
     case 'trigger.manual': return { label: 'Manual Trigger' }
-    case 'ai.run_agent':   return { label: 'Run Agent', agentId: '', agentName: '' }
-    case 'control.condition': return { label: 'Condition', condition: '' }
-    case 'util.response':  return { label: 'Response' }
-    default:               return { label: type }
+    case 'ai.run_agent':   return { label: 'Run Agent', agentId: '', agentName: '', input: '' }
+    case 'util.http_request':   return { label: 'HTTP Request', method: 'GET', url: '', headers: '', body: '' }
+    case 'control.condition':   return { label: 'Condition', condition: '' }
+    case 'control.delay':       return { label: 'Delay', delaySeconds: 2 }
+    case 'ai.agent_decision':   return { label: 'Agent Decision', agentId: '', agentName: '', question: '' }
+    case 'util.set_variable':   return { label: 'Set Variable', variableName: '', value: '' }
+    case 'util.transform_data': return { label: 'Transform', template: '' }
+    case 'util.json_parser':    return { label: 'JSON Parser', path: '' }
+    case 'util.log':            return { label: 'Log', message: '' }
+    case 'mcp.execute_tool':    return { label: 'MCP Tool', serverId: '', serverName: '', toolName: '', arguments: '{}' }
+    case 'mcp.fetch_resource':  return { label: 'MCP Resource', serverId: '', serverName: '', resourceUri: '' }
+    case 'ai.agent_review':     return { label: 'Agent Review', agentId: '', agentName: '', criteria: '' }
+    case 'control.switch':      return { label: 'Switch', cases: [] }
+    case 'util.response':       return { label: 'Response' }
+    default:                    return { label: type }
   }
 }
 
@@ -55,6 +92,59 @@ const DEFAULT_NODES: Node[] = [
     data: { label: 'Manual Trigger' },
   },
 ]
+
+function layoutNodes(nodes: any[], edges: any[]): Node[] {
+  const NODE_W = 280
+  const NODE_H = 150
+
+  // Build adjacency map
+  const children = new Map<string, string[]>()
+  nodes.forEach((n) => children.set(n.id, []))
+  edges.forEach((e) => {
+    children.get(e.source)?.push(e.target)
+  })
+
+  // BFS to assign layers
+  const layers = new Map<string, number>()
+  const roots = nodes
+    .filter((n) => !edges.some((e) => e.target === n.id))
+    .map((n) => n.id)
+
+  const queue: string[] = [...roots]
+  roots.forEach((id) => layers.set(id, 0))
+  while (queue.length) {
+    const id = queue.shift()!
+    const layer = layers.get(id)!
+    for (const child of children.get(id) ?? []) {
+      if (!layers.has(child) || layers.get(child)! < layer + 1) {
+        layers.set(child, layer + 1)
+        queue.push(child)
+      }
+    }
+  }
+
+  // Group by layer
+  const byLayer = new Map<number, string[]>()
+  layers.forEach((layer, id) => {
+    if (!byLayer.has(layer)) byLayer.set(layer, [])
+    byLayer.get(layer)!.push(id)
+  })
+
+  // Assign positions
+  const positions = new Map<string, { x: number; y: number }>()
+  byLayer.forEach((ids, layer) => {
+    ids.forEach((id, idx) => {
+      const totalH = ids.length * NODE_H
+      const startY = (600 - totalH) / 2 + idx * NODE_H
+      positions.set(id, { x: 80 + layer * NODE_W, y: startY })
+    })
+  })
+
+  return nodes.map((n) => ({
+    ...n,
+    position: positions.get(n.id) ?? { x: 80, y: 80 },
+  })) as Node[]
+}
 
 export default function WorkflowEditorPage() {
   return (
@@ -71,11 +161,15 @@ function WorkflowEditorInner() {
   const { screenToFlowPosition } = useReactFlow()
 
   const [nodes, setNodes, onNodesChange] = useNodesState(DEFAULT_NODES)
-  const [edges, setEdges, onEdgesChange] = useEdgesState([])
+  const [edges, setEdges, onEdgesChange] = useEdgesState<Edge>([])
   const [selectedNode, setSelectedNode] = useState<Node | null>(null)
   const [workflowName, setWorkflowName] = useState('Untitled workflow')
   const [isDirty, setIsDirty] = useState(false)
   const [initialized, setInitialized] = useState(false)
+  const [lastExecution, setLastExecution] = useState<Execution | null>(null)
+  const [showGenerateDialog, setShowGenerateDialog] = useState(false)
+  const executeWorkflow = useExecuteWorkflow(id!)
+  const generateWorkflow = useGenerateWorkflow()
 
   useEffect(() => {
     if (workflow && !initialized) {
@@ -197,7 +291,38 @@ function WorkflowEditorInner() {
             <span className="text-xs text-green-500">Saved</span>
           )}
 
-          <div className="ml-auto">
+          <div className="ml-auto flex items-center gap-2">
+            <Link to={`/workflows/${id}/history`}>
+              <Button size="sm" variant="ghost" className="text-muted-foreground hover:text-foreground">
+                <History size={13} className="mr-1.5" />
+                History
+              </Button>
+            </Link>
+            <Button
+              size="sm"
+              variant="outline"
+              className="border-violet-500/40 text-violet-400 hover:bg-violet-500/10 hover:text-violet-300"
+              onClick={() => {
+                generateWorkflow.reset()
+                setShowGenerateDialog(true)
+              }}
+            >
+              <Sparkles size={13} className="mr-1.5" />
+              Generate
+            </Button>
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => executeWorkflow.mutate(undefined, {
+                onSuccess: (result) => setLastExecution(result),
+                onError: (err: any) => alert(err?.response?.data?.message ?? 'Execution failed'),
+              })}
+              disabled={executeWorkflow.isPending || isDirty}
+              title={isDirty ? 'Save before running' : 'Run workflow'}
+            >
+              <Play size={13} className="mr-1.5" />
+              {executeWorkflow.isPending ? 'Running…' : 'Run'}
+            </Button>
             <Button size="sm" onClick={save} disabled={updateWorkflow.isPending || !isDirty}>
               <Save size={13} className="mr-1.5" />
               {updateWorkflow.isPending ? 'Saving…' : 'Save'}
@@ -230,11 +355,17 @@ function WorkflowEditorInner() {
                 size={1}
                 color="#1e293b"
               />
-              <Controls
-                showInteractive={false}
-                style={{ background: 'hsl(var(--card))', border: '1px solid hsl(var(--border))' }}
-              />
+              <Controls showInteractive={false} />
             </ReactFlow>
+
+            {lastExecution && (
+              <div className="absolute bottom-0 left-0 right-0 z-10">
+                <ExecutionPanel
+                  execution={lastExecution}
+                  onClose={() => setLastExecution(null)}
+                />
+              </div>
+            )}
           </div>
 
           {selectedNode && (
@@ -247,6 +378,34 @@ function WorkflowEditorInner() {
           )}
         </div>
       </div>
+
+      {showGenerateDialog && (
+        <GenerateDialog
+          isLoading={generateWorkflow.isPending}
+          error={
+            generateWorkflow.isError
+              ? ((generateWorkflow.error as any)?.response?.data?.message ?? 'Generation failed. Please try again.')
+              : null
+          }
+          onClose={() => setShowGenerateDialog(false)}
+          onGenerate={(description) => {
+            generateWorkflow.mutate(description, {
+              onSuccess: (graph) => {
+                const laid = layoutNodes(graph.nodes, graph.edges)
+                const styledEdges = graph.edges.map((e: any) => ({
+                  ...e,
+                  ...defaultEdgeOptions,
+                }))
+                setNodes(laid)
+                setEdges(styledEdges as any)
+                setSelectedNode(null)
+                setIsDirty(true)
+                setShowGenerateDialog(false)
+              },
+            })
+          }}
+        />
+      )}
     </div>
   )
 }

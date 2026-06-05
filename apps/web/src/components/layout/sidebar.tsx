@@ -1,4 +1,4 @@
-import { Bot, GitFork, LayoutDashboard, Settings, LogOut } from 'lucide-react'
+import { Bot, GitFork, LayoutDashboard, Server, Settings, LogOut } from 'lucide-react'
 import { NavLink, useNavigate } from 'react-router-dom'
 import { cn } from '@/lib/utils'
 import { useAuthStore } from '@/store/auth.store'
@@ -8,6 +8,7 @@ const links = [
   { to: '/dashboard', icon: LayoutDashboard, label: 'Dashboard' },
   { to: '/agents', icon: Bot, label: 'Agents' },
   { to: '/workflows', icon: GitFork, label: 'Workflows' },
+  { to: '/mcp', icon: Server, label: 'MCP Servers' },
   { to: '/settings', icon: Settings, label: 'Settings' },
 ]
 

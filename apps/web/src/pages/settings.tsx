@@ -69,6 +69,8 @@ export default function SettingsPage() {
     openaiApiKey: '',
     deepseekApiKey: '',
     googleApiKey: '',
+    grokApiKey: '',
+    qwenApiKey: '',
   })
 
   useEffect(() => {

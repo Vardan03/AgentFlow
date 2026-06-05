@@ -22,6 +22,11 @@ export function AgentNode({ data, selected }: { data: any; selected?: boolean })
         <p className="text-xs text-muted-foreground mt-0.5">
           {data.agentName || 'No agent selected'}
         </p>
+        {data.input && (
+          <p className="text-xs text-muted-foreground mt-1.5 font-mono truncate border-t border-border pt-1.5">
+            "{data.input}"
+          </p>
+        )}
       </div>
       <Handle
         type="source"

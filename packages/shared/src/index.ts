@@ -15,6 +15,7 @@ export type WorkflowNodeType =
   | 'ai.agent_review'
   | 'mcp.execute_tool'
   | 'mcp.fetch_resource'
+  | 'util.http_request'
   | 'util.set_variable'
   | 'util.transform_data'
   | 'util.json_parser'

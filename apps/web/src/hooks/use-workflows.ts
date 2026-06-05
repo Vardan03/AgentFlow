@@ -55,3 +55,30 @@ export function useDeleteWorkflow() {
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['workflows'] }),
   })
 }
+
+export function useDuplicateWorkflow() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: (id: string) =>
+      api.post(`/workflows/${id}/duplicate`).then((r) => r.data as Workflow),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['workflows'] }),
+  })
+}
+
+export function useToggleWorkflow() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: ({ id, isEnabled }: { id: string; isEnabled: boolean }) =>
+      api.patch(`/workflows/${id}`, { isEnabled }).then((r) => r.data),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['workflows'] }),
+  })
+}
+
+export function useGenerateWorkflow() {
+  return useMutation({
+    mutationFn: (description: string) =>
+      api
+        .post('/workflows/generate', { description })
+        .then((r) => r.data as { nodes: any[]; edges: any[] }),
+  })
+}

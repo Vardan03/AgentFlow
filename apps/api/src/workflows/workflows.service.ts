@@ -45,6 +45,18 @@ export class WorkflowsService {
     })
   }
 
+  async duplicate(id: string, userId: string) {
+    const source = await this.findOne(id, userId)
+    return this.prisma.workflow.create({
+      data: {
+        userId,
+        name: `Copy of ${source.name}`,
+        description: source.description,
+        graph: source.graph as any,
+      },
+    })
+  }
+
   async remove(id: string, userId: string) {
     await this.findOne(id, userId)
     return this.prisma.workflow.delete({ where: { id } })
