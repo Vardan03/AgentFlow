@@ -1,0 +1,4 @@
+DATABASE_URL=postgresql://postgres:vardan2003@localhost:5432/AgentFlow
+JWT_SECRET=supersecret123
+JWT_EXPIRES_IN=7d
+NODE_ENV=development
